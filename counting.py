@@ -10,59 +10,48 @@ import cv2
 
 # variable to save extracted data
 ext_data = []
-#glob_max_dist = []
+glob_max_dist = []
 
-def uniqueCount(model_file, img_path, dir_data):
+def uniqueCount(model_file, img_path):
 
     #status if same face found ('0' none, '1' found)
     status = 0
 
-    # distance value
-    dist = 0.0
-    max_dist = 0.0
-    
     # Load model
     base_model = load_model(model_file)
 
     # Extract features from an arbitrary intermediate layer
-    # like the block4 pooling layer in VGG19
-    model = Model(inputs = base_model.input, outputs = base_model.get_layer('Feature_Extract').output)
+    model = Model(inputs = base_model.input, outputs = base_model.get_layer('Feature_Extract_1').output)
 
+    # Load image test, convert into array, normalizing
     img = image.load_img(img_path, target_size=(105, 105))
     x = image.img_to_array(img)
+    x = cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)
+    x = x.astype(np.float32)
     x = np.multiply(x, 1.0 / 255.0)
-    x = np.expand_dims(x, axis=0)
-    #x = preprocess_input(x)
-
-    #print(np.max(x))
+    
+    x = np.expand_dims(x, axis=2)
     
     # get the features 
-    features = model.predict(x)
+    features = model.predict([x,x])
 
     if ext_data:
         i=0
-        while i < len(ext_data) and status == 0:
+        while i < len(ext_data):
             
-            dist = np.sum((features - ext_data[i])**2)
+            dist = np.sum((features - ext_data[i])**2) / 4096
             print('Distance value: ',dist)
 
-            if dist < 350.0:
+            if dist < 0.003:
                 status = 1
-
-            if max_dist < dist:
-                max_dist = dist
             
             i += 1        
     else:
         print('(Extracted feature data is empty)\n')
         
     ext_data.append(features)
-    #glob_max_dist.append(max_dist)
 
-    #print('Max Distance Value: ',max_dist)
-    
     if status == 0:
         return 1
     else:
         return 0
-                    
